@@ -1,0 +1,345 @@
+<intel_ek>
+<settings>
+   <ek_name> Intel TEK Seed </ek_name>
+   <ek_version> v1.0 </ek_version>
+   <usb_dev> /dev/sdb </usb_dev>         
+   <dns_server> 8.8.8.8 </dns_server>            
+   <http_proxy> </http_proxy>           
+   <https_proxy> </https_proxy>    
+   <live_dir> /home/lifu/tmp/EK_live </live_dir>
+   <live_mnt> /home/lifu/tmp/EK_mnt  </live_mnt>
+   <build_dir>/home/lifu/tmp/EK_build </build_dir> 
+   <usb_part_a_size> 4G </usb_part_a_size>
+   <usb_part_b_size> 24G </usb_part_b_size>
+   <username>root</username>
+   <password>root</password>
+   <openvino_dataset> </openvino_dataset>
+   <reuse_lbuild> False </reuse_lbuild>
+   <reuse_nspawn> False </reuse_nspawn>
+   <reuse_framework> False </reuse_framework>
+   <reuse_iso> False </reuse_iso>
+</settings>
+<ubuntu>
+      <kernel_20.04> 5.8.0-55-generic  </kernel_20.04>  
+      <kernel_20.10> 5.8.0-55-generic  </kernel_20.10>  
+</ubuntu>
+
+<live-build>
+#/bin/bash -x
+
+# TEK Seed live-build
+rel=$$(lsb_release -r |cut -d':' -f2)
+if [ $${rel} != "18.04" ]  &amp;&amp; [ $${rel} != "20.04" ] &amp;&amp; [ $${rel} != "20.10" ]; then
+   echo "Only Ubuntu 20.10, 20.04 or 18.04 is supported"
+   exit 0
+fi
+
+LIVE_DIR=${LIVE_DIR}
+rm -rf ${LIVE_DIR}
+mkdir -p ${LIVE_DIR}
+pushd ${LIVE_DIR}
+
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+if [ $${rel} == "16.04" ]; then 
+   cp -a /usr/share/livecd-rootfs/live-build/ubuntu-core .
+   cp -a /usr/share/livecd-rootfs/live-build/auto .   
+   lb config ${LB_PROXY}
+   sed -i 's/precise/xenial/g' config/bootstrap    
+   DEBOOTSTRAP_OPTIONS="--no-check-gpg" lb build
+elif [ $${rel} == "18.04" ]; then 
+   cp -a /usr/share/livecd-rootfs/live-build/ubuntu-core .
+   cp -a /usr/share/livecd-rootfs/live-build/auto .   
+   lb config ${LB_PROXY}
+   sed -i 's/precise/bionic/g' config/bootstrap    
+   DEBOOTSTRAP_OPTIONS="--no-check-gpg" lb build
+elif [ $${rel} == "20.04" ]; then 
+   cp -a /usr/share/livecd-rootfs/live-build/ubuntu-core .
+   lb config ${LB_PROXY}
+   sed -i 's/precise/focal/g' config/bootstrap   
+   DEBOOTSTRAP_OPTIONS="--no-check-gpg" lb build xxxxx
+elif [ $${rel} == "20.10" ]; then 
+   cp -a /usr/share/livecd-rootfs/live-build/ubuntu-core .
+   lb config ${LB_PROXY}
+   sed -i 's/precise/groovy/g' config/bootstrap   
+   DEBOOTSTRAP_OPTIONS="--no-check-gpg" lb build
+else
+   echo "Not supported Ubuntu Version"
+   exit 1
+fi
+</live-build> 
+
+<systemd-nspawn>  
+#/bin/bash -x
+
+# TEK Seed nspawn
+LIVE_DIR=${LIVE_DIR}
+KERN_VERSION=${KERN_VERSION}
+NS_PROXY='${NS_PROXY}'
+PACKAGE=''
+DNS=${DNS}
+
+pushd ${LIVE_DIR}  
+cp /etc/apt/sources.list chroot/etc/apt/.
+cp /etc/resolv.conf chroot/etc/resolv.conf
+if [ $DNS ]; then
+   echo "nameserver $DNS" >> chroot/etc/resolv.conf
+fi
+
+# systemd-nspawn
+systemd-nspawn --pipe -D chroot ${NS_PROXY} &#60;&#60; EOF 
+
+# ----- !!! Packages are for Ubuntu 20.10 only !!! -----
+apt update -y
+	
+# Common packages	
+apt install --ignore-missing -y ${PACKAGES} 
+	
+# kernel and modules
+apt autoremove -y
+apt --fix-broken install -y
+apt install -y linux-headers-$(uname -r) linux-image-$(uname -r) linux-tools-$(uname -r)
+apt install -y linux-modules-extra-$(uname -r)
+
+# Python pip3
+pip3 install pexpect
+pip3 install openpyxl
+pip3 install xlsxwriter
+pip3 install pandas
+	
+# Link
+ln -s /usr/bin/python3.8 /usr/bin/python
+
+systemctl enable ssh   
+systemctl enable rc-local             
+adduser guest --gecos 'guest,1,2,3' --disabled-password 
+adduser guest sudo                    
+echo "guest:guest" | chpasswd 
+echo "root:root" | chpasswd  
+
+cd /root              
+mkdir -p .ssh; ssh-keygen -f .ssh/id_rsa -t rsa -N ''
+echo "export LC_ALL=C" >> /root/.bashrc
+hash -r &amp;&amp; hash
+touch /root/welcome-to-Intel-TEK-Seed.txt
+EOF
+popd 
+</systemd-nspawn>
+
+<systemd-nspawn-packages> 
+live-boot live-boot-initramfs-tools \
+grub2-common build-essential autoconf automake flex bison byacc \
+powertop numactl libtool pkg-config \
+openssh-server openssh-client net-tools nfs-common uml-utilities bridge-utils \
+iputils-ping curl git curl wget cloud-image-utils ethtool \
+ntfs-3g libguestfs-tools lsof tree less zip vim  \
+screen htop pciutils hwloc cpu-checker bc tmux lshw cpuid \
+libnuma-dev numactl libssl-dev libcap-ng-dev libncap-dev \
+libpcap-dev libglib2.0-dev qemu-kvm virtinst \
+libudev-dev libboost-all-dev stress-ng ipmitool fio ipheth-utils \
+exfat-fuse fuse2fs stress-ng msr-tools yasm \
+meson ninja-build lua5.3 cmake liblua5.3-dev \
+libmbedcrypto3 libmbedtls12 libmbedcrypto* libmbedx509-0 \
+libpixman-1-dev python3 python3-pip python3-lxml
+</systemd-nspawn-packages>
+
+<customize>
+#!/bin/bash -x
+# Customize LiveOS
+#LIVE_DIR=${LIVE_DIR}
+#KERN_VERSION=${KERN_VERSION}
+
+#----------------
+# Workload 
+#----------------
+#  ...
+
+#----------------
+# Customization 
+#----------------
+pushd ${LIVE_DIR}  
+rm -rf chroot/etc/debian_chroot
+cp /etc/apt/sources.list chroot/etc/apt/
+sed -i 's!//tw.!//!' chroot/etc/apt/sources.list
+cp chroot/etc/fstab chroot/etc/fstab.orig
+rm -rf chroot/etc/resolv.conf
+echo "ek-live"               | tee chroot/etc/hostname
+echo "127.0.0.1 ek-live"     | tee chroot/etc/hosts
+echo "root:root"             | sudo chpasswd --root `pwd`/chroot
+echo "msr"                   | tee -a chroot/etc/modules
+echo "r8152"                 | tee -a chroot/etc/modules
+echo "ax88179_178a"          | tee -a chroot/etc/modules
+
+# Auto-login
+mkdir -p ./chroot/etc/systemd/system/console-getty.service.d
+cat &#62; ./chroot/etc/systemd/system/console-getty.service.d/override.conf &#60;&#60; EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --noclear --autologin root --keep-baud console 115200,38
+400,9600 $TERM
+EOF
+mkdir -p ./chroot/etc/systemd/system/getty@tty1.service.d
+cat &#62; ./chroot/etc/systemd/system/getty@tty1.service.d/override.conf &#60;&#60; EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --noissue --autologin root %I $TERM
+Type=idle
+EOF
+
+# ISO's Boot entry  
+a=`ls ./chroot/boot/vmlinuz*`
+arr=($a)
+vmlinuz0=/boot/`basename ${arr[0]}`
+vmlinuz1=/boot/`basename ${arr[1]}`
+b=`ls ./chroot/boot/initrd*`
+arr=($b)
+initrd0=/boot/`basename ${arr[0]}`
+initrd1=/boot/`basename ${arr[1]}`
+cat > ./chroot/boot/grub/grub.cfg &#60;&#60; EOF
+set timeout=5
+menuentry 'Intel TEK Seed ISO image - kernel ${vmlinuz1}' { 
+  linux ${vmlinuz1} boot=live console=tty1 console=ttyS0,115200
+  initrd ${initrd1}
+}
+EOF
+
+# Fstab 
+cp chroot/etc/fstab.orig chroot/etc/fstab
+echo "/dev/disk/by-partlabel/TEK_Seed /root/work ext4" &#62;&#62; chroot/etc/fstab
+popd 
+</customize>
+
+
+<create-iso> 
+#!/bin/bash -x
+
+# Create a bootable ISO image
+#LIVE_DIR=${LIVE_DIR}
+
+pushd ${LIVE_DIR}
+# Allow root login
+sed -i 's/#PermitRootLogin/PermitRootLogin/' chroot/etc/ssh/sshd_config
+sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' chroot/etc/ssh/sshd_config
+
+# Adjust TimeoutStartSec=5min in network service
+if [ -e "chroot/lib/systemd/system/networking.service" ]; then
+   sed -i -e 's/5min/20sec/g' chroot/lib/systemd/system/networking.service
+fi
+
+# Create an ISO
+mkdir -p iso/live
+cp -a chroot/boot iso/
+rm -rf iso/live/filesystem.squashfs
+mksquashfs chroot iso/live/filesystem.squashfs
+grub-mkrescue -o ek-live.iso iso
+# qemu-system-x86_64 -boot d -cdrom ek-live.iso -m 512
+# apt install ovmf
+# qemu-system-x86_64 -boot d --bios /usr/share/ovmf/OVMF.fd -m 512 -hda /dev/sdX
+popd
+</create-iso>
+
+<create-usb>
+#!/bin/bash -x
+
+# Create a USB drive 
+LIVE_DIR=${LIVE_DIR}	   
+DISK=${DISK}
+MNT=${MNT}
+CURR_DIR=${CURR_DIR}
+EK_DIR=${EK_DIR}
+KERN_VERSION=${KERN_VERSION}
+PART_A_SIZE=${PART_A_SIZE}
+PART_B_SIZE=${PART_B_SIZE}
+
+# Zero-n-format disk
+# FIXME: partition size
+
+# Disable automount
+gsettings set org.gnome.desktop.media-handling automount false
+
+# Unmount auto-mount - Step1
+m=$(mount | grep ${DISK}1 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+m=$(mount | grep ${DISK}2 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+
+sgdisk -Z ${DISK}
+sgdisk -n 0:0:+${PART_A_SIZE} -t 1:ef00 -c 0:"UEFI_Live" ${DISK}
+sgdisk -n 0:0:+${PART_B_SIZE} -t 1:8300 -c 0:"TEK_Seed" ${DISK}
+mkfs.vfat -F32 ${DISK}1
+yes | mkfs.ext4 ${DISK}2
+mkdir -p ${MNT}
+chown -R root.root ${MNT}
+
+# Unmount auto-mount - Step2
+m=$(mount | grep ${DISK}1 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+m=$(mount | grep ${DISK}2 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+
+# Make LiveOS partition
+set +e; umount -f ${MNT} &#38;&#62; /dev/null; set -e
+mount -t vfat ${DISK}1 $MNT
+rsync -aux --no-owner --no-group --links ${CURR_DIR}/usb-pack_efi/ ${MNT}/.
+cp ${LIVE_DIR}/ek-live.iso ${MNT}/iso/.
+
+# Determine kernel for grub menu entry
+pushd ${LIVE_DIR}
+a=`ls ./chroot/boot/vmlinuz*`
+arr=($a)
+vmlinuz0=/boot/`basename ${arr[0]}`
+vmlinuz1=/boot/`basename ${arr[1]}`
+b=`ls ./chroot/boot/initrd*`
+arr=($b)
+initrd0=/boot/`basename ${arr[0]}`
+initrd1=/boot/`basename ${arr[1]}`
+
+# Grub entry
+cat &#62; ${MNT}/boot/grub/grub.cfg &#60;&#60; EOF
+set timeout=5
+menuentry 'Intel TEK Seed - XYZ (${vmlinuz1})' (Serial Timeout=5) {
+   set isofile="/iso/ek-live.iso"
+   loopback loop \$isofile
+   linux (loop)${vmlinuz1} findiso=\$isofile boot=live isolcpus=1-7 rcu_nocbs=1-7 nmi_watchdog=0 audit=0 nosoftlockup intel_pstate=disable processor.max_cstate=1 intel_idle.max_cstate=1 hpet=disable mce=off numa_balancing=disable default_hugepagesz=1GB hugepagesz=1G hugepages=6 iommu=pt console=tty1 console=ttyS0,115200 
+   initrd (loop)${initrd1}
+}
+EOF
+
+
+# Sync before umount
+sync ${MNT}
+umount -f ${MNT}
+popd
+</create-usb>
+
+<vnni>#!/bin/bash -x
+
+DISK=${DISK}
+MNT=${MNT}
+mkdir -p ${MNT}
+
+# In case of auto-mount 
+m=$(mount | grep ${DISK}1 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+m=$(mount | grep ${DISK}2 | awk -F " type" '{print $1}' | awk -F "on " '{print $2}')
+if [ ! -z "$m" ]; then umount $m; fi
+
+# Umount and mount ext4
+set +e; umount -f ${MNT} &#38;&#62; /dev/null; set -e
+mount ${DISK}2 ${MNT}
+touch ${MNT}/hello-lifu
+
+#-------------------------------------------------------------------------------
+#                         Copy EK
+#-------------------------------------------------------------------------------
+touch ${MNT}/hello-lifu.txt 
+EK_DIR=$(dirname $(dirname $PWD))
+
+#mv $HOME/dataset ../tools/openvino/dataset
+#rsync -aux -Paz --no-owner --no-group ${EK_DIR} ${MNT}/.
+
+
+# Sync/umount
+sync ${MNT}
+umount ${MNT}
+</vnni>
+</intel_ek>
