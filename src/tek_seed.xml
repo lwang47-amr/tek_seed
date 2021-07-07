@@ -3,9 +3,9 @@
    <ek_name> Intel TEK Seed </ek_name>
    <ek_version> v1.0 </ek_version>
    <usb_dev> /dev/sdb </usb_dev>         
-   <dns_server> 10.248.2.1 </dns_server>            
-   <http_proxy> http://proxy-us.intel.com:911 </http_proxy>           
-   <https_proxy> http://proxy-us.intel.com: 911 </https_proxy>    
+   <dns_server> 8.8.8.8 </dns_server>            
+   <http_proxy> </http_proxy>           
+   <https_proxy> </https_proxy>    
    <live_dir> /home/lifu/tmp/EK_live </live_dir>
    <live_mnt> /home/lifu/tmp/EK_mnt  </live_mnt>
    <build_dir>/home/lifu/tmp/EK_build </build_dir> 
@@ -97,9 +97,9 @@ apt install --ignore-missing -y ${PACKAGES}
 # ICX pkg
 apt install --ignore-missing meson ninja-build lua5.3 liblua5.3-dev -y
 	
-# SoC
-systemctl enable serial-getty@ttyS4.service
-systemctl start serial-getty@ttyS4.service
+# SoC - TBD: kernel panic?
+#systemctl enable serial-getty@ttyS4.service
+#systemctl start serial-getty@ttyS4.service
 
 # kernel and modules
 apt autoremove -y
@@ -144,9 +144,9 @@ libnuma-dev numactl libssl-dev libcap-ng-dev libncap-dev \
 libpcap-dev libglib2.0-dev qemu-kvm virtinst \
 libudev-dev libboost-all-dev stress-ng ipmitool fio ipheth-utils \
 exfat-fuse fuse2fs stress-ng msr-tools yasm \
-meson ninja-build lua5.3 cmake liblua5.3-dev libpixman-1-dev \ 
+meson ninja-build lua5.3 cmake liblua5.3-dev libpixman-1-dev \
 libmbedcrypto3 libmbedtls12 libmbedcrypto* libmbedx509-0 \
-apt-get install libmbedcrypto* libmbedx509* libmbedtls* \
+libmbedcrypto* libmbedx509* libmbedtls* \
 libpixman-1-dev yasm python3 python3-pip python3-lxml
 </systemd-nspawn-packages>
 
