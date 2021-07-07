@@ -94,6 +94,13 @@ apt update -y
 # Common packages	
 apt install --ignore-missing -y ${PACKAGES} 
 	
+# ICX pkg
+apt install --ignore-missing meson ninja-build lua5.3 liblua5.3-dev -y
+	
+# SoC
+systemctl enable serial-getty@ttyS4.service
+systemctl start serial-getty@ttyS4.service
+
 # kernel and modules
 apt autoremove -y
 apt --fix-broken install -y
@@ -102,7 +109,7 @@ apt install -y linux-modules-extra-$(uname -r)
 
 # Python pip3
 pip3 install pexpect
-pip3 install openpyxl
+pip3 install "openpyxl==2.5" --force-reinstall
 pip3 install xlsxwriter
 pip3 install pandas
 	
@@ -127,7 +134,7 @@ popd
 
 <systemd-nspawn-packages> 
 live-boot live-boot-initramfs-tools \
-grub2-common build-essential autoconf automake flex bison byacc \
+grub2-common build-essential autoconf automake flex bison byacc cmake \
 powertop numactl libtool pkg-config \
 openssh-server openssh-client net-tools nfs-common uml-utilities bridge-utils \
 iputils-ping curl git curl wget cloud-image-utils ethtool \
@@ -137,9 +144,10 @@ libnuma-dev numactl libssl-dev libcap-ng-dev libncap-dev \
 libpcap-dev libglib2.0-dev qemu-kvm virtinst \
 libudev-dev libboost-all-dev stress-ng ipmitool fio ipheth-utils \
 exfat-fuse fuse2fs stress-ng msr-tools yasm \
-meson ninja-build lua5.3 cmake liblua5.3-dev \
+meson ninja-build lua5.3 cmake liblua5.3-dev libpixman-1-dev \ 
 libmbedcrypto3 libmbedtls12 libmbedcrypto* libmbedx509-0 \
-libpixman-1-dev python3 python3-pip python3-lxml
+apt-get install libmbedcrypto* libmbedx509* libmbedtls* \
+libpixman-1-dev yasm python3 python3-pip python3-lxml
 </systemd-nspawn-packages>
 
 <customize>
