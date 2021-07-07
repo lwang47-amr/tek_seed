@@ -3,9 +3,9 @@
    <ek_name> Intel TEK Seed </ek_name>
    <ek_version> v1.0 </ek_version>
    <usb_dev> /dev/sdb </usb_dev>         
-   <dns_server> 8.8.8.8 </dns_server>            
-   <http_proxy> </http_proxy>           
-   <https_proxy> </https_proxy>    
+   <dns_server> 10.248.2.1 </dns_server>            
+   <http_proxy> http://proxy-us.intel.com:911 </http_proxy>           
+   <https_proxy> http://proxy-us.intel.com: 911 </https_proxy>    
    <live_dir> /home/lifu/tmp/EK_live </live_dir>
    <live_mnt> /home/lifu/tmp/EK_mnt  </live_mnt>
    <build_dir>/home/lifu/tmp/EK_build </build_dir> 
@@ -135,7 +135,7 @@ popd
 <systemd-nspawn-packages> 
 live-boot live-boot-initramfs-tools \
 grub2-common build-essential autoconf automake flex bison byacc cmake \
-powertop numactl libtool pkg-config \
+powertop numactl libtool pkg-config ssh \
 openssh-server openssh-client net-tools nfs-common uml-utilities bridge-utils \
 iputils-ping curl git curl wget cloud-image-utils ethtool \
 ntfs-3g libguestfs-tools lsof tree less zip vim  \
